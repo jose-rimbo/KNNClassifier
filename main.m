@@ -1,139 +1,41 @@
-clear;
-clc;
-import_data %creates data variable
+minK = 2;
+maxK = 20;
 
-%Manhattan = 1
-%Euclidian = 2 
-%Minkowsk  = 3
-DISTANCE = 3;
+loop = 6;
 
-qtd_classes = [0 0 0];
+matrix_man = zeros(maxK-minK+1,loop+1);
+matrix_euc = zeros(maxK-minK+1,loop+1);
+matrix_min3 = zeros(maxK-minK+1,loop+1);
+matrix_min4 = zeros(maxK-minK+1,loop+1);
 
-for (i=1:size(data,1)) 
-    
-    index = 0;
-    for j=1:3
-        if(data(i,j)==1)
-            index = j;
-            break;
-        end;
-    end 
-  
-    qtd_classes(1,index) = qtd_classes(1,index)+1;   
-end
+import_data;
 
-qt_train = round(qtd_classes*(1/3));
-qt_test = qtd_classes-qt_train;
-qt_exit = [0 0 0];
-
-train = [];
-test = [];
-flag = 0;
-
-while(qt_exit(1,1)<qt_train(1,1) || qt_exit(1,2)<qt_train(1,2) || qt_exit(1,3)<qt_train(1,3))
-    
-    r = randi([1 size(data,1)],1,1);  
-    
-    for j=1:3
-        if(data(r,j)==1)
-            index = j;
-            break;
-        end;
-    end 
-    
-    if (qt_exit(1,index)<qt_train(1,index))
-        qt_exit(1,index) = qt_exit(1,index)+1;            
-        flag = 1;       
-    end;    
-    
-    if(flag == 1) 
-        train = [train; data(r,:)];
-        if(r == 1) 
-            data = data(2:end,:);
-        elseif(r == size(data,1))
-            data = data(1:size(data,1)-1,:);
-        else
-            data = data([1:r-1,r+1:end],:);
-        end
-        
-        flag = 0;
-    end    
-end
-
-test = data;
-K = 10;
-matches = 0;
-
-for(k=1:size(test,1))
-    x = test(k,:);
-    d = [];
-
-    %Manhattan
-    if(DISTANCE==1)
-        for (i=1:size(train,1))  
-            temp = [0 0 0 0];    
-            for (j=4:size(test,2))
-                temp(1,j-3) = abs(test(k,j)- train(i,j)) ;     
-            end
-            d = [d; sum(temp)];    
-        end
-    end
-    
-    if(DISTANCE==2)
-        for (i=1:size(train,1))  
-            temp = [0 0 0 0];    
-            for (j=4:size(test,2))
-                temp(1,j-3) = power(test(k,j)- train(i,j),2) ;     
-            end
-            d = d.^(1/2);
-            d = [d; sum(temp)];    
-        end
-    end
-    
-    if(DISTANCE==3)
-        w = 3;
-        for (i=1:size(train,1))  
-            temp = [0 0 0 0];    
-            for (j=4:size(test,2))
-                temp(1,j-3) = power(test(k,j)- train(i,j),w) ;     
-            end
-            d = d.^(1/2);
-            d = [d; sum(temp)];    
-        end
-    end
-
-    result = [train d];
-    result = sortrows(result,8);
-    result = result(1:K,:);
-
-
-    sums = [0 0 0];
-    qtd_classes = [0 0 0];
-
-    for (i=1:size(result,1)) 
-        index = 0;
-        for j=1:3
-            if(result(i,j)==1)
-                index = j;
-                break;
-            end;
-        end   
-
-        qtd_classes(1,index) = qtd_classes(1,index)+1;
-        sums(1,index) = sum(1,index) + result(i,8);
-
-    end
-
-    [index,index] = min(sums./qtd_classes);
-    if (test(k,index)==1)
-        matches = matches+1;
-    end;
-    
+for(i=1:loop)
+    [train, test] = organize_data(data);    
+    for(j=minK:maxK)
+       matrix_man(j-minK+1,i) = KNN(j,1,train,test,-1); 
+       matrix_euc(j-minK+1,i) = KNN(j,2,train,test, -1); 
+       matrix_min3(j-minK+1,i) = KNN(j,3,train,test, 3);         
+       matrix_min4(j-minK+1,i) = KNN(j,3,train,test, 4);         
+    end       
 end;
 
-matches/size(test,1)
+for(i=minK:maxK)
+    matrix_man(i-minK+1,loop+1) = sum(matrix_man(i-minK+1,:))/loop;
+    matrix_euc(i-minK+1,loop+1) = sum(matrix_euc(i-minK+1,:))/loop;
+    matrix_min3(i-minK+1,loop+1) = sum(matrix_min3(i-minK+1,:))/loop;    
+    matrix_min4(i-minK+1,loop+1) = sum(matrix_min4(i-minK+1,:))/loop;    
+end
 
+final = zeros(maxK-minK+2,4);
 
+final(:,1) = [matrix_man(:,1); 0];
+final(:,2) = [matrix_euc(:,1); 0];
+final(:,3) = [matrix_min3(:,1); 0];
+final(:,4) = [matrix_min4(:,1); 0];
 
+for i=1:4    
+    final(maxK-minK+2,i) = sum(final(:,i))/(maxK-minK+1);        
+end
 
 
